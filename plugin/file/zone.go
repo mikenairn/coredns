@@ -1,6 +1,7 @@
 package file
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -9,9 +10,12 @@ import (
 
 	"github.com/coredns/coredns/plugin/file/tree"
 	"github.com/coredns/coredns/plugin/pkg/upstream"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 )
+
+type RRResolver func(ctx context.Context, state request.Request, rrs []dns.RR) dns.RR
 
 // Zone is a structure that contains all data related to a DNS zone.
 type Zone struct {
@@ -31,6 +35,8 @@ type Zone struct {
 	reloadShutdown chan bool
 
 	Upstream *upstream.Upstream // Upstream for looking up external names during the resolution process.
+
+	RRResolver RRResolver
 }
 
 // Apex contains the apex records of a zone: SOA, NS and their potential signatures.
@@ -49,6 +55,9 @@ func NewZone(name, file string) *Zone {
 		file:           filepath.Clean(file),
 		Tree:           &tree.Tree{},
 		reloadShutdown: make(chan bool),
+		RRResolver: func(_ context.Context, _ request.Request, rrs []dns.RR) dns.RR {
+			return rrs[0]
+		},
 	}
 }
 

@@ -323,6 +323,8 @@ func (z *Zone) externalLookup(ctx context.Context, state request.Request, elem *
 	qtype := state.QType()
 	do := state.Do()
 
+	rrs = []dns.RR{z.RRResolver(ctx, state, rrs)}
+
 	if do {
 		sigs := elem.Type(dns.TypeRRSIG)
 		sigs = rrutil.SubTypeSignature(sigs, dns.TypeCNAME)
@@ -342,14 +344,16 @@ func (z *Zone) externalLookup(ctx context.Context, state request.Request, elem *
 Redo:
 	cname := elem.Type(dns.TypeCNAME)
 	if len(cname) > 0 {
-		rrs = append(rrs, cname...)
+
+		c := z.RRResolver(ctx, state, cname)
+		rrs = append(rrs, c)
 
 		if do {
 			sigs := elem.Type(dns.TypeRRSIG)
 			sigs = rrutil.SubTypeSignature(sigs, dns.TypeCNAME)
 			rrs = append(rrs, sigs...)
 		}
-		targetName := cname[0].(*dns.CNAME).Target
+		targetName := c.(*dns.CNAME).Target
 		elem, _ = z.Tree.Search(targetName)
 		if elem == nil {
 			lookupRRs, result := z.doLookup(ctx, state, targetName, qtype)
@@ -367,7 +371,7 @@ Redo:
 
 	targets := elem.Type(qtype)
 	if len(targets) > 0 {
-		rrs = append(rrs, targets...)
+		rrs = append(rrs, z.RRResolver(ctx, state, targets))
 
 		if do {
 			sigs := elem.Type(dns.TypeRRSIG)
