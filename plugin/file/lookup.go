@@ -330,53 +330,9 @@ func (z *Zone) externalLookup(ctx context.Context, state request.Request, elem *
 	}
 
 	targetName := rrs[0].(*dns.CNAME).Target
-	elem, _ = z.Tree.Search(targetName)
-	if elem == nil {
-		lookupRRs, result := z.doLookup(ctx, state, targetName, qtype)
-		rrs = append(rrs, lookupRRs...)
-		return rrs, z.Apex.ns(do), nil, result
-	}
-
-	i := 0
-
-Redo:
-	cname := elem.Type(dns.TypeCNAME)
-	if len(cname) > 0 {
-		rrs = append(rrs, cname...)
-
-		if do {
-			sigs := elem.Type(dns.TypeRRSIG)
-			sigs = rrutil.SubTypeSignature(sigs, dns.TypeCNAME)
-			rrs = append(rrs, sigs...)
-		}
-		targetName := cname[0].(*dns.CNAME).Target
-		elem, _ = z.Tree.Search(targetName)
-		if elem == nil {
-			lookupRRs, result := z.doLookup(ctx, state, targetName, qtype)
-			rrs = append(rrs, lookupRRs...)
-			return rrs, z.Apex.ns(do), nil, result
-		}
-
-		i++
-		if i > 8 {
-			return rrs, z.Apex.ns(do), nil, Success
-		}
-
-		goto Redo
-	}
-
-	targets := elem.Type(qtype)
-	if len(targets) > 0 {
-		rrs = append(rrs, targets...)
-
-		if do {
-			sigs := elem.Type(dns.TypeRRSIG)
-			sigs = rrutil.SubTypeSignature(sigs, qtype)
-			rrs = append(rrs, sigs...)
-		}
-	}
-
-	return rrs, z.Apex.ns(do), nil, Success
+	lookupRRs, result := z.doLookup(ctx, state, targetName, qtype)
+	rrs = append(rrs, lookupRRs...)
+	return rrs, z.Apex.ns(do), nil, result
 }
 
 func (z *Zone) doLookup(ctx context.Context, state request.Request, target string, qtype uint16) ([]dns.RR, Result) {
