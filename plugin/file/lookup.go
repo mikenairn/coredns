@@ -165,6 +165,10 @@ func (z *Zone) Lookup(ctx context.Context, state request.Request, qname string) 
 				nsrrs = append(nsrrs, dss...)
 			}
 
+			if qtype == dns.TypeNS {
+				return nsrrs, nil, glue, Delegation
+			}
+
 			return nil, nsrrs, glue, Delegation
 		}
 
